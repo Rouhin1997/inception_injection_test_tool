@@ -54,6 +54,15 @@ For a single case in a SLURM array:
 
     python -m inception_lite --config my_grid.json --case case_0004
 
+The generic SLURM launcher also accepts an optional third argument
+to override folding for every array task:
+
+    sbatch --array=1-9 scripts/slurm_inception_lite.sh my_grid.json sif yes
+
+Use `no` instead of `yes` to skip folding; omit the third argument
+to follow the JSON setting. The SIF still needs PulsarX when folding
+is enabled.
+
 Modes: together (many pulsars in ONE filterbank), separate (one per
 filterbank), grid (Cartesian product of parameters), random (reproducible
 parameter draws). The runner refuses to overwrite preexisting case
