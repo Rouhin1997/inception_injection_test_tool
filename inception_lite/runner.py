@@ -216,11 +216,30 @@ def fold_truth(run_dir, output_fil, pulses, cfg, header):
     mid_epoch = header["tstart"] + header["actual_nsamples"] * header["tsamp"] / (2 * 86400)
     results = []
     for p in pulses:
-        cand = run_dir / f"{p['ID']}.candfile"
-        if not cand.is_file():
-            raise ValueError(f"Required injection candfile missing: {cand}")
+        # Use a folding truth file consistent with INCEPTION's *injected*
+        # first-order Doppler phase. Keep its own historical .candfile intact
+        # for cross-checks: it includes a slightly different a^2/c^2 term.
+        if p.get("binary_period") or p.get("pint_polycos") or any(
+                k in p for k in ("F1", "F2", "P1", "P2", "presto_z", "presto_w")):
+            raise ValueError("Automatic truth folding is currently limited to simple AX-only topocentric injections")
+        if "PEPOCH" in p or "PEPOCH" in cfg.get("psr_global", {}):
+            raise ValueError("Explicit PEPOCH needs a verified epoch transformation; omit it for midpoint folding")
+        f0 = 1.0 / float(p["P0"]) if "P0" in p else float(p["F0"])
+        a = float(p.get("A0", cfg.get("psr_global", {}).get("A0", 0.0)))
+        jerk = float(p.get("A1", cfg.get("psr_global", {}).get("A1", 0.0)))
+        dm = float(p.get("DM", cfg.get("psr_global", {}).get("DM", 0.0)))
+        snr = float(p["SNR"])
+        c = 299792458.0
+        f1 = -a * f0 / c
+        f2 = -jerk * f0 / c
         fold_dir = run_dir / "folds" / p["ID"]
         fold_dir.mkdir(parents=True, exist_ok=False)
+        cand = fold_dir / f"{p['ID']}_phase_truth.cands"
+        cand.write_text(
+            "#id DM acc F0 F1 F2 S/N\\n".replace("\\\\n", "\\n") +
+            f"0 {dm:.16g} {a:.16g} {f0:.16g} {f1:.16g} {f2:.16g} {snr:.16g}\\n".replace("\\\\n", "\\n"),
+            encoding="utf-8",
+        )
         args = [binary, "--template", str(template.resolve()),
                 "--candfile", str(cand.resolve()), "--pepoch", f"{mid_epoch:.13f}",
                 "--nosearch", "-b", str(fold.get("nbin", 64)),
@@ -252,6 +271,11 @@ def run(config_path, *, dry_run=False, selected_case=None):
         raise ValueError(f"Input filterbank not found: {base}")
     header = read_filterbank_header(base)
     if cfg.get("fold", {}).get("enabled", False):
+        fold = cfg["fold"]
+        if not Path(fold.get("template", "")).is_file():
+            raise ValueError("Cannot start: fold.template is missing")
+        if shutil.which(fold.get("binary", "psrfold_fil")) is None:
+            raise ValueError("Cannot start: PulsarX psrfold_fil is unavailable")
         # Validate before doing expensive injections.
         if any(p.get("frame", cfg.get("psr_global", {}).get("frame", "bary")) != "topo"
                for _, ps in cases for p in ps):
