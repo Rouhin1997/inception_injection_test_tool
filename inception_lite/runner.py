@@ -257,6 +257,19 @@ def fold_truth(run_dir, output_fil, pulses, cfg, header):
                 "-f", str(output_fil.resolve())]
         with (fold_dir / "fold.log").open("w") as output:
             subprocess.run(args, check=True, stdout=output, stderr=subprocess.STDOUT)
+        archives = sorted(fold_dir.glob("*.ar"))
+        if not archives:
+            raise RuntimeError(f"PulsarX returned successfully but no .ar archive exists: {fold_dir}")
+        pngs = list(fold_dir.glob("*.png"))
+        if not pngs:
+            # The upstream PlotX renderer sometimes produces no PNG in
+            # headless Docker/Singularity. Fall back to plotting the *actual*
+            # folded PSRFITS archive so the injection remains eye-checkable.
+            from .fold_plots import plot_folded_archive
+            plot_folded_archive(
+                archives[0], fold_dir / f"{p['ID']}_folded_profile.png",
+                label=f"{p['ID']}: PulsarX folded archive (a={a:g}, j={jerk:g})",
+            )
         products = [str(f.relative_to(run_dir)) for f in fold_dir.rglob("*") if f.is_file()]
         results.append({"pulsar": p["ID"], "command": args, "products": products})
     return results
