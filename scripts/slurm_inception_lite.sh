@@ -14,6 +14,8 @@ if [[ $# -lt 1 ]]; then
   exit 2
 fi
 CONFIG="$(readlink -f "$1")"
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$REPO_DIR"
 ENV_MODE="$( [ $# -ge 2 ] && echo "$2" || echo host )"
 ARRAY_INDEX="$(printenv SLURM_ARRAY_TASK_ID || echo 1)"
 printf -v CASE "case_%04d" "$ARRAY_INDEX"
