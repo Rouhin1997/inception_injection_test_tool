@@ -82,6 +82,18 @@ class Planning(unittest.TestCase):
         with self.assertRaises(ValueError):
             plan_cases(x)
 
+    def test_prevent_double_midpoint_epoch_shift(self):
+        x = config()
+        x["psr_global"]["PEPOCH"] = 0.5
+        with self.assertRaisesRegex(ValueError, "PEPOCH"):
+            plan_cases(x)
+
+    def test_require_explicit_topocentric_or_barycentric_frame(self):
+        x = config()
+        del x["psr_global"]["frame"]
+        with self.assertRaisesRegex(ValueError, "frame explicitly"):
+            plan_cases(x)
+
     def test_grid_case_limit(self):
         x = config()
         x["mode"] = "grid"
