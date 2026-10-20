@@ -9,7 +9,6 @@
   "psr_global": {
     "frame": "topo",
     "ACCEPOCH": 0.5,
-    "PEPOCH": 0.5,
     "create_parfile": "pulsarx"
   },
   "pulsars": [
