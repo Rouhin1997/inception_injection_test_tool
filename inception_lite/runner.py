@@ -9,6 +9,7 @@ import argparse
 import copy
 import hashlib
 import itertools
+import importlib.metadata
 import json
 import math
 import random
@@ -338,6 +339,16 @@ def run(config_path, *, dry_run=False, selected_case=None):
             "seed": resolved["psr_global"]["global_seed"],
             "pulsars": pulsars, "header": header,
             "inject_command": cmd, "folding": folding,
+            "provenance": {
+                "python": sys.version.split()[0],
+                "injector_script_sha256": hashlib.sha256(INJECTOR.read_bytes()).hexdigest(),
+                "pulsar_model_sha256": hashlib.sha256(
+                    (REPO / "injector" / "pulsar_model.py").read_bytes()).hexdigest(),
+                "software": {
+                    package: importlib.metadata.version(package)
+                    for package in ("numpy", "scipy", "astropy", "sympy", "pandas")
+                },
+            },
         }
         (dest / "run_manifest.json").write_text(
             json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
