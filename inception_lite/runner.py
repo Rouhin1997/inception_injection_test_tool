@@ -142,6 +142,14 @@ def plan_cases(config):
         raise ValueError("Too many planned cases; raise max_cases explicitly if intended")
     for _, batch in cases:
         check_pulsars(batch)
+        for pulsar in batch:
+            global_args = config.get("psr_global", {})
+            if "frame" not in pulsar and "frame" not in global_args:
+                raise ValueError("Set frame explicitly to topo or bary; upstream defaults are not appropriate for blind validation")
+            a = pulsar.get("A0", global_args.get("A0", 0))
+            j = pulsar.get("A1", global_args.get("A1", 0))
+            if (a or j) and ("PEPOCH" in pulsar or "PEPOCH" in global_args):
+                raise ValueError("Do not set PEPOCH with A0/A1 in the validated mode: original spin_ref and ACCEPOCH are both offsets")
     return cases
 
 
