@@ -8,7 +8,7 @@ from unittest import mock
 
 from inception_lite.make_filterbank import make_filterbank
 from inception_lite.runner import (
-    case_seed, check_pulsars, draw, plan_cases,
+    apply_folding_override, case_seed, check_pulsars, draw, main, plan_cases,
     read_filterbank_header, run,
 )
 
@@ -113,6 +113,43 @@ class Planning(unittest.TestCase):
             result = run(cfg, dry_run=True)
             self.assertEqual(len(result), 3)
             self.assertFalse(Path(x["output_dir"]).exists())
+
+    def test_folding_cli_precedence_and_config_preservation(self):
+        x = config()
+        x["fold"] = {"enabled": False, "template": "my_fold.template", "nbin": 64}
+        yes = apply_folding_override(copy.deepcopy(x), True)
+        self.assertTrue(yes["fold"]["enabled"])
+        self.assertEqual(yes["fold"]["template"], "my_fold.template")
+        self.assertFalse(x["fold"]["enabled"])
+        x["fold"]["enabled"] = True
+        no = apply_folding_override(copy.deepcopy(x), False)
+        self.assertFalse(no["fold"]["enabled"])
+        default = apply_folding_override(copy.deepcopy(x), None)
+        self.assertTrue(default["fold"]["enabled"])
+        with self.assertRaises(ValueError):
+            apply_folding_override(x, "yes")
+
+    def test_cli_yes_no_flag_and_underscore_alias(self):
+        for arg, value, expected in (
+            ("--perform-folds", "yes", True),
+            ("--perform-folds", "no", False),
+            ("--perform_folds", "yes", True),
+        ):
+            with self.subTest(arg=arg, value=value):
+                with mock.patch("sys.argv", ["inception-lite", "--config", "dummy.json", arg, value]):
+                    with mock.patch("inception_lite.runner.run") as mocked:
+                        main()
+                        self.assertEqual(mocked.call_args.kwargs["perform_folds"], expected)
+        with mock.patch("sys.argv", ["inception-lite", "--config", "dummy.json"]):
+            with mock.patch("inception_lite.runner.run") as mocked:
+                main()
+                self.assertIsNone(mocked.call_args.kwargs["perform_folds"])
+
+    def test_invalid_folding_cli_choice_is_rejected(self):
+        with mock.patch("sys.argv", ["inception-lite", "--config", "dummy.json",
+                                     "--perform-folds", "maybe"]):
+            with self.assertRaises(SystemExit):
+                main()
 
     def test_filterbank_header_and_reproducibility(self):
         with tempfile.TemporaryDirectory() as tmp:
