@@ -236,8 +236,8 @@ def fold_truth(run_dir, output_fil, pulses, cfg, header):
         fold_dir.mkdir(parents=True, exist_ok=False)
         cand = fold_dir / f"{p['ID']}_phase_truth.cands"
         cand.write_text(
-            "#id DM acc F0 F1 F2 S/N\\n".replace("\\\\n", "\\n") +
-            f"0 {dm:.16g} {a:.16g} {f0:.16g} {f1:.16g} {f2:.16g} {snr:.16g}\\n".replace("\\\\n", "\\n"),
+            "#id DM acc F0 F1 F2 S/N" + chr(10) +
+            f"0 {dm:.16g} {a:.16g} {f0:.16g} {f1:.16g} {f2:.16g} {snr:.16g}" + chr(10),
             encoding="utf-8",
         )
         args = [binary, "--template", str(template.resolve()),
