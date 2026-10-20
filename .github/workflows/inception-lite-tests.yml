@@ -25,6 +25,8 @@ jobs:
         run: python -m unittest discover -s tests -p 'smoke_injection.py' -v
       - name: Verify real jerk injection recovers with correct phase sign
         run: python -m unittest discover -s tests -p 'stress_jerk_injection.py' -v
+      - name: Test multi-pulsar shared-filterbank injection and parallel workers
+        run: python -m unittest discover -s tests -p 'smoke_multi_injection.py' -v
       - name: Show standalone CLI help
         run: |
           python -m inception_lite --help
