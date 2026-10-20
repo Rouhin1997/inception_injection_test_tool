@@ -1,0 +1,33 @@
+# Full INCEPTION-Lite image with real PulsarX candidate folding.
+# Based on the independently built and CUDA 12.3/A40-matched PULSEJET image.
+# This retains every tool already compiled into that pinned development image.
+FROM rouhin1997/pulsejet:dev-polynomial-513e80d1ace21868fd3d3d37734bcd79782abce3
+
+SHELL ["/bin/bash", "-lc"]
+ENV DEBIAN_FRONTEND=noninteractive
+
+# PULSEJET base already bundles NumPy, SciPy, Astropy, pandas, PlotX and
+# PulsarX. SymPy is needed by the native upstream INCEPTION Doppler model.
+RUN apt-get update -y && \
+    apt-get install -y --no-install-recommends python3-sympy && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /opt/inception
+COPY . /opt/inception
+
+# --cleanenv Singularity sessions still use this baked-in package path.
+ENV PYTHONPATH=/opt/inception
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PYTHONHASHSEED=0
+
+# Fail before publishing if basic injection physics or the actual PulsarX
+# executable breaks. No fake binary is used in smoke_real_pulsarx.py.
+RUN python3 -c "import numpy, scipy, astropy, sympy, pandas; print('INCEPTION Python ready')" && \
+    which psrfold_fil && test -r /usr/local/share/pulsarx/meerkat_fold.template && \
+    python3 -m unittest discover -s tests -p 'test_inception_lite.py' -v && \
+    python3 -m unittest discover -s tests -p 'test_folding.py' -v && \
+    python3 -m unittest discover -s tests -p 'smoke_injection.py' -v && \
+    python3 -m unittest discover -s tests -p 'stress_jerk_injection.py' -v && \
+    python3 -m unittest discover -s tests -p 'smoke_multi_injection.py' -v && \
+    python3 -m unittest discover -s tests -p 'smoke_real_pulsarx.py' -v
+
+CMD ["python3", "-m", "inception_lite", "--help"]
