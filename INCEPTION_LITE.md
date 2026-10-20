@@ -21,6 +21,33 @@ output_dir placeholder paths with your actual paths. Then:
     python -m inception_lite --config my_single.json --dry-run
     python -m inception_lite --config my_single.json
 
+To choose automated **PulsarX truth folding** on each run without editing
+the JSON configuration, use:
+
+    python -m inception_lite --config my_single.json --perform-folds yes
+    python -m inception_lite --config my_single.json --perform-folds no
+
+The spelling `--perform_folds` is also accepted. The command-line choice
+takes precedence over `fold.enabled` in the JSON. Omitting it uses the
+existing JSON value (default: no folding). `yes` means inject, then
+automatically call PulsarX to fold each known injected source and save
+its profile plot, archive and log under `folds/<pulsar-id>/`.
+`no` means inject without running PulsarX. `--dry-run` always only
+lists planned cases; it never generates data or folds anything.
+
+**Important:** Folding requires a working `psrfold_fil` executable and
+a valid `fold.template` in the chosen environment. Our small CPU-only
+INCEPTION-Lite Docker image currently tests folding orchestration with
+a fake executable, but does *not* include PulsarX itself; the expanded
+PULSEJET development container does include PulsarX. We must complete
+that image integration and a real PulsarX smoke test before `yes`
+can be used inside the injector-only SIF.
+
+The input and injected output remain SIGPROC `.fil` format.
+Search-mode PSRFITS `.fits` input is not directly supported; it
+needs a validated conversion to SIGPROC or a separately implemented
+PSRFITS read/write path.
+
 To create a parameter grid, use configs/inception_lite_grid.json, or
 configs/inception_lite_random.json for seeded random parameter draws.
 For a single case in a SLURM array:
