@@ -252,6 +252,7 @@ def fold_truth(run_dir, output_fil, pulses, cfg, header):
         args = [binary, "--template", str(template.resolve()),
                 "--candfile", str(cand.resolve()), "--pepoch", f"{mid_epoch:.13f}",
                 "--nosearch", "-b", str(fold.get("nbin", 64)),
+                "--nsubband", str(min(header["nchans"], int(fold.get("nsubband", 32)))),
                 "-o", str((fold_dir / p["ID"]).resolve()),
                 "-f", str(output_fil.resolve())]
         with (fold_dir / "fold.log").open("w") as output:
