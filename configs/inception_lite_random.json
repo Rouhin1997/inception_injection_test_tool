@@ -1,0 +1,54 @@
+{
+  "id": "random_population",
+  "seed": 20261020,
+  "mode": "random",
+  "filterbank": "/path/to/noise_template.fil",
+  "output_dir": "/path/to/output",
+  "offline": true,
+  "ncpu": 1,
+  "psr_global": {
+    "frame": "topo",
+    "ACCEPOCH": 0.5,
+    "PEPOCH": 0.5,
+    "create_parfile": "pulsarx"
+  },
+  "pulsars": [
+    {
+      "ID": "PSR_RANDOM",
+      "P0": 0.02,
+      "DM": 30,
+      "SNR": 25
+    }
+  ],
+  "random": {
+    "count": 12,
+    "parameters": {
+      "P0": {
+        "distribution": "loguniform",
+        "min": 0.005,
+        "max": 0.1
+      },
+      "DM": {
+        "distribution": "uniform",
+        "min": 0,
+        "max": 100
+      },
+      "A0": {
+        "distribution": "uniform",
+        "min": -200,
+        "max": 200
+      },
+      "A1": {
+        "distribution": "choice",
+        "values": [
+          -0.5,
+          0,
+          0.5
+        ]
+      }
+    }
+  },
+  "fold": {
+    "enabled": false
+  }
+}
