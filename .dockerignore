@@ -1,0 +1,12 @@
+.git
+.venv
+__pycache__
+**/__pycache__
+**/*.pyc
+*.fil
+**/*.fil
+*.sif
+**/*.sif
+outputs
+work
+*.log
