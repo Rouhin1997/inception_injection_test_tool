@@ -1,0 +1,42 @@
+{
+  "id": "accjerk_grid",
+  "seed": 20261020,
+  "mode": "grid",
+  "filterbank": "/path/to/noise_template.fil",
+  "output_dir": "/path/to/output",
+  "offline": true,
+  "ncpu": 1,
+  "stats_samples": 10000,
+  "gulp_size_GB": 0.002,
+  "psr_global": {
+    "frame": "topo",
+    "ACCEPOCH": 0.5,
+    "PEPOCH": 0.5,
+    "DM_ref": "inf",
+    "create_parfile": "pulsarx"
+  },
+  "pulsars": [
+    {
+      "ID": "PSR_GRID",
+      "P0": 0.02,
+      "DM": 40,
+      "SNR": 25,
+      "duty_cycle": 0.05
+    }
+  ],
+  "grid": {
+    "A0": [
+      -100,
+      0,
+      100
+    ],
+    "A1": [
+      -0.5,
+      0,
+      0.5
+    ]
+  },
+  "fold": {
+    "enabled": false
+  }
+}
