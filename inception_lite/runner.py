@@ -261,8 +261,20 @@ def fold_truth(run_dir, output_fil, pulses, cfg, header):
     return results
 
 
-def run(config_path, *, dry_run=False, selected_case=None):
-    cfg = json.loads(Path(config_path).read_text(encoding="utf-8"))
+def apply_folding_override(cfg, perform_folds):
+    """A command-line choice takes precedence over fold.enabled in JSON."""
+    if perform_folds is not None:
+        if not isinstance(perform_folds, bool):
+            raise ValueError("perform_folds must be True, False or None")
+        cfg.setdefault("fold", {})["enabled"] = perform_folds
+    return cfg
+
+
+def run(config_path, *, dry_run=False, selected_case=None, perform_folds=None):
+    cfg = apply_folding_override(
+        json.loads(Path(config_path).read_text(encoding="utf-8")),
+        perform_folds,
+    )
     cases = plan_cases(cfg)
     if selected_case is not None:
         cases = [c for c in cases if c[0] == selected_case]
@@ -370,9 +382,20 @@ def main():
     p.add_argument("--config", required=True, help="Portable run JSON configuration")
     p.add_argument("--dry-run", action="store_true", help="Plan only; no file changes or dependencies")
     p.add_argument("--case", help="Only run one case_0001 etc (useful for SLURM arrays)")
+    p.add_argument(
+        "--perform-folds", "--perform_folds",
+        choices=("yes", "no"), default=None,
+        help="Run PulsarX truth folds after injection? yes/no. Overrides JSON fold.enabled; "
+             "requires a working psrfold_fil and fold.template when yes.",
+    )
     args = p.parse_args()
     try:
-        run(args.config, dry_run=args.dry_run, selected_case=args.case)
+        run(
+            args.config, dry_run=args.dry_run, selected_case=args.case,
+            perform_folds=(
+                args.perform_folds == "yes" if args.perform_folds is not None else None
+            ),
+        )
     except (ValueError, KeyError, FileNotFoundError, FileExistsError, subprocess.CalledProcessError) as exc:
         p.exit(2, f"[INCEPTION-LITE] ERROR: {exc}\n")
 
