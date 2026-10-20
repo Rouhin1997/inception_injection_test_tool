@@ -1,0 +1,38 @@
+{
+  "id": "single_accjerk",
+  "seed": 20261020,
+  "mode": "together",
+  "filterbank": "/path/to/noise_template.fil",
+  "output_dir": "/path/to/output",
+  "offline": true,
+  "ncpu": 1,
+  "stats_samples": 10000,
+  "gulp_size_GB": 0.001,
+  "generate_fb": [
+    128,
+    6
+  ],
+  "psr_global": {
+    "frame": "topo",
+    "ACCEPOCH": 0.5,
+    "PEPOCH": 0.5,
+    "DM_ref": "inf",
+    "create_parfile": "pulsarx"
+  },
+  "pulsars": [
+    {
+      "ID": "PSR_AJ",
+      "P0": 0.02,
+      "DM": 10,
+      "SNR": 60,
+      "A0": 100,
+      "A1": 0.5,
+      "duty_cycle": 0.06
+    }
+  ],
+  "fold": {
+    "enabled": false,
+    "template": "/usr/local/share/pulsarx/meerkat_fold.template",
+    "nbin": 64
+  }
+}
