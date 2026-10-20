@@ -1,0 +1,27 @@
+name: INCEPTION-Lite CPU validation
+on:
+  push:
+    branches: [dev/pulsejet-injections]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  injection-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install pinned-range scientific dependencies
+        run: python -m pip install -r requirements-inception-lite.txt
+      - name: Test injection planning and Doppler physics
+        run: python -m unittest discover -s tests -p 'test_inception_lite.py' -v
+      - name: Validate generated filterbank with real INCEPTION injector
+        run: python -m unittest discover -s tests -p 'smoke_injection.py' -v
+      - name: Show standalone CLI help
+        run: |
+          python -m inception_lite --help
+          python -m inception_lite.make_filterbank --help
