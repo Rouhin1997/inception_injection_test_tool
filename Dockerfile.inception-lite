@@ -1,7 +1,7 @@
 # CPU-only, Nextflow-free INCEPTION injector.
 # Build outside the HPC, convert the OCI image to a read-only SIF.
 FROM python:3.11-slim-bookworm
-ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PYTHONHASHSEED=0
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PYTHONHASHSEED=0 PYTHONPATH=/opt/inception
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends libgomp1 ca-certificates && \
