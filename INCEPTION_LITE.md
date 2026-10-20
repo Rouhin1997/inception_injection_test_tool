@@ -152,3 +152,56 @@ can be converted into a read-only SIF without creating a sandbox.
 scripts/slurm_inception_lite.sh launches individual cases on any SLURM
 cluster with Python or SingularityCE, without Nextflow or fixed MPIfR
 partitions. Pass source and data paths through writable mounts.
+
+
+## Published combined image: real injection + PulsarX folding (2026-10-20)
+
+An integrated INCEPTION-Lite / PulsarX Docker image has been **built, tested
+and published** under the existing Docker Hub repository
+`rouhin1997/pulsejet`, with **separate injector-specific tags**:
+
+    rouhin1997/pulsejet:inception-lite-5a9cd1c9b252ffd1797575267c4528fa5b8e81c5
+    rouhin1997/pulsejet:inception-lite-latest
+
+Published from INCEPTION-Lite commit
+`5a9cd1c9b252ffd1797575267c4528fa5b8e81c5`,
+GitHub Actions: https://github.com/Rouhin1997/PULSEJET_beta/actions/runs/39423881379
+
+The combined image layers Python/SymPy and this repository's code over the
+previously compiled `PULSEJET` CUDA 12.3.2 and PulsarX image, so it is larger
+than the separate minimal CPU-only image. You only need the one SIF if you
+want both injection and PulsarX truth folding. **The original master/main
+branches and production Docker Hub `pulsejet:latest` tag are unchanged.**
+
+On the HPC's SingularityCE 3.11:
+
+    singularity pull inception_lite.sif \
+      docker://rouhin1997/pulsejet:inception-lite-5a9cd1c9b252ffd1797575267c4528fa5b8e81c5
+
+Then, assuming your JSON file and SIGPROC .fil are on writable host scratch
+and the same absolute paths are visible within Singularity:
+
+    singularity exec --bind /scratch:/scratch inception_lite.sif \
+      python3 -m inception_lite --config /scratch/injections.json \
+      --dry-run
+
+    singularity exec --bind /scratch:/scratch inception_lite.sif \
+      python3 -m inception_lite --config /scratch/injections.json \
+      --perform-folds yes
+
+For injection and CPU PulsarX folding, `--nv` is not needed. It is needed
+when you subsequently execute the CUDA PULSEJET search on the cluster.
+
+Real GitHub Docker image integration testing injected a source with
+`P0=0.02 s, A0=400 m/s^2, A1=-3 m/s^3` and verified that real
+`psrfold_fil` created a non-empty folded `.ar` archive and PNG.
+PulsarX's native PlotX pipeline produced no PNG in that headless CI
+container; INCEPTION-Lite now renders a small PNG **from the actual
+PulsarX folded PSRFITS archive**. It does not invent the profile from
+injection parameters. Files are under
+`case_0001/folds/<pulsar-id>/`.
+
+**Boundaries:** this is a successful software/integration test, not yet
+a scientific recovery or sensitivity benchmark on the actual A40 cluster.
+The plots should be examined, and PULSEJET GPU recovery still needs
+independent injection-to-search validation.
