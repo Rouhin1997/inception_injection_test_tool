@@ -1,0 +1,19 @@
+# CPU-only, Nextflow-free INCEPTION injector.
+# Build outside the HPC, convert the OCI image to a read-only SIF.
+FROM python:3.11-slim-bookworm
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PYTHONHASHSEED=0
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends libgomp1 ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /opt/inception
+COPY requirements-inception-lite.txt .
+RUN python -m pip install --no-cache-dir -r requirements-inception-lite.txt
+
+COPY . .
+RUN python -m unittest discover -s tests -p 'test_inception_lite.py' -v && \
+    python -m unittest discover -s tests -p 'test_folding.py' -v && \
+    python -m unittest discover -s tests -p 'smoke_injection.py' -v && \
+    python -m unittest discover -s tests -p 'stress_jerk_injection.py' -v
+CMD ["python", "-m", "inception_lite", "--help"]
