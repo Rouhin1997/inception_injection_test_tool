@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Losslessly split a SIGPROC .fil into independently usable sub-filterbanks.
 
-Only tstart and nsamples change. Original is read-only. Does not overwrite
+Only tstart changes; nsamples changes when the input header includes it. Original is read-only. Does not overwrite
 existing outputs. Writes *.part and only renames on successful verification.
 """
 import argparse
@@ -62,8 +62,8 @@ def split(src, folder, divisions=4):
         raise ValueError('Refusing to place output next to input without distinct directory')
     with src.open('rb') as inp:
         fields,loc,head,data_offset=header(inp)
-        if not {'tstart','tsamp','nsamples','nbits','nchans'}<=fields.keys():
-            raise ValueError('Required SIGPROC header fields absent')
+        if not {'tstart','tsamp','nbits','nchans'}<=fields.keys():
+            raise ValueError(f'Missing required SIGPROC fields: {sorted({"tstart","tsamp","nbits","nchans"}-fields.keys())}')
         bits_per_sample=fields['nchans']*fields['nbits']*fields.get('nifs',1)
         if bits_per_sample%8:
             raise ValueError('This lossless splitter requires integral bytes per time sample')
@@ -74,7 +74,7 @@ def split(src, folder, divisions=4):
         if payload<1 or payload%bps:
             raise ValueError('Invalid or truncated data length')
         n=payload//bps
-        if fields['nsamples']!=n:
+        if 'nsamples' in fields and fields['nsamples'] not in (0,n):
             raise ValueError(f'Header nsamples={fields["nsamples"]}, payload samples={n}; abort')
         if divisions>n:
             raise ValueError('More windows than input time samples')
@@ -98,7 +98,8 @@ def split(src, folder, divisions=4):
             partial=Path(str(output)+'.part')
             modified=bytearray(head)
             struct.pack_into('<d',modified,loc['tstart'],p['tstart_mjd'])
-            struct.pack_into('<i',modified,loc['nsamples'],p['nsamples'])
+            if 'nsamples' in loc:
+                struct.pack_into('<i',modified,loc['nsamples'],p['nsamples'])
             inp.seek(data_offset+p['start_sample']*bps)
             to_copy=p['nsamples']*bps
             with partial.open('xb') as out:
