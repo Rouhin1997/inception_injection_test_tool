@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from inception_lite.make_filterbank import make_filterbank
+from inception_lite.make_filterbank import make_filterbank, main as make_filterbank_main
 from inception_lite.runner import (
     apply_folding_override, case_seed, check_pulsars, draw, main, plan_cases,
     read_filterbank_header, run,
@@ -161,6 +161,31 @@ class Planning(unittest.TestCase):
             self.assertEqual(h["actual_nsamples"], 256)
             self.assertEqual(h["nchans"], 4)
             self.assertEqual(h["telescope_id"], 64)
+
+    def test_cli_filterbank_defaults_write_valid_sigproc_doubles(self):
+        # Regression: argparse leaves integer-valued defaults unchanged,
+        # but SIGPROC tstart and fch1 MUST be serialized as float64.
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "cli_default.fil"
+            argv = ["make_filterbank", "--output", str(output),
+                    "--samples", "64", "--nchans", "4"]
+            with mock.patch("sys.argv", argv):
+                make_filterbank_main()
+            header = read_filterbank_header(output)
+            self.assertEqual(header["actual_nsamples"], 64)
+            self.assertEqual(header["tstart"], 60000.0)
+            self.assertEqual(header["fch1"], 1400.0)
+            self.assertEqual(header["nchans"], 4)
+
+    def test_filterbank_schema_ignores_python_numeric_types(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "ints_in_float_fields.fil"
+            make_filterbank(output, samples=64, nchans=4,
+                            tstart=60000, fch1=1400)
+            header = read_filterbank_header(output)
+            self.assertEqual(header["tstart"], 60000.0)
+            self.assertEqual(header["fch1"], 1400.0)
+            self.assertEqual(header["actual_nsamples"], 64)
 
     def test_output_refuses_overwrite(self):
         with tempfile.TemporaryDirectory() as tmp:
