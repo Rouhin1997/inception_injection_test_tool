@@ -1,0 +1,71 @@
+{
+  "id": "m62_w4_five_injections_20261023",
+  "seed": 20261027,
+  "mode": "together",
+  "filterbank": "/home/rnag/PULSEJET_validation/stage6_m62/m62_15m_windows/W4_M62_background.fil",
+  "output_dir": "/home/rnag/PULSEJET_validation/stage6_m62/m62_15m_injections/W4",
+  "offline": true,
+  "ncpu": 16,
+  "stats_samples": 200000,
+  "gulp_size_GB": 0.02,
+  "psr_global": {
+    "frame": "topo",
+    "ACCEPOCH": 0.5,
+    "DM_ref": "inf",
+    "create_parfile": "pulsarx"
+  },
+  "pulsars": [
+    {
+      "ID": "M62_W4_I16",
+      "P0": 0.003861003861003861,
+      "DM": 8,
+      "SNR": 40,
+      "A0": 0,
+      "A1": 0,
+      "duty_cycle": 0.05
+    },
+    {
+      "ID": "M62_W4_I17",
+      "P0": 0.003436426116838488,
+      "DM": 20,
+      "SNR": 55,
+      "A0": -220,
+      "A1": 0,
+      "duty_cycle": 0.05
+    },
+    {
+      "ID": "M62_W4_I18",
+      "P0": 0.0030959752321981426,
+      "DM": 2,
+      "SNR": 12,
+      "A0": 0,
+      "A1": -0.25,
+      "duty_cycle": 0.05
+    },
+    {
+      "ID": "M62_W4_I19",
+      "P0": 0.002881844380403458,
+      "DM": 4,
+      "SNR": 32,
+      "A0": -90,
+      "A1": 0.06,
+      "duty_cycle": 0.05
+    },
+    {
+      "ID": "M62_W4_I20",
+      "P0": 0.0025575447570332483,
+      "DM": 12,
+      "SNR": 15,
+      "A0": 250,
+      "A1": -0.3,
+      "duty_cycle": 0.05
+    }
+  ],
+  "fold": {
+    "enabled": true,
+    "binary": "psrfold_fil",
+    "template": "/usr/local/share/pulsarx/meerkat_fold.template",
+    "nbin": 128,
+    "nsubband": 32
+  }
+}
