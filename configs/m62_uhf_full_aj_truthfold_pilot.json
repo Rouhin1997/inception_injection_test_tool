@@ -1,0 +1,35 @@
+{
+  "id": "m62_uhf_full_aj_pilot_01",
+  "seed": 20261023,
+  "mode": "together",
+  "filterbank": "/home/rnag/PULSEJET_validation/stage6_m62/m62_original.fil",
+  "output_dir": "/home/rnag/PULSEJET_validation/stage6_m62/injections_full_m62_aj_pilot_01",
+  "offline": true,
+  "ncpu": 8,
+  "stats_samples": 200000,
+  "gulp_size_GB": 0.02,
+  "psr_global": {
+    "frame": "topo",
+    "ACCEPOCH": 0.5,
+    "DM_ref": "inf",
+    "create_parfile": "pulsarx"
+  },
+  "pulsars": [
+    {
+      "ID": "PULSEJET_M62_PILOT_AJ",
+      "P0": 0.0049,
+      "DM": 6,
+      "SNR": 160,
+      "A0": 120,
+      "A1": 0.15,
+      "duty_cycle": 0.05
+    }
+  ],
+  "fold": {
+    "enabled": true,
+    "binary": "psrfold_fil",
+    "template": "/usr/local/share/pulsarx/meerkat_fold.template",
+    "nbin": 128,
+    "nsubband": 32
+  }
+}
