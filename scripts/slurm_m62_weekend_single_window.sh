@@ -57,7 +57,7 @@ if cfg.get("mode") != "together" or len(cfg.get("pulsars", [])) != 5:
 cfg["ncpu"] = cpus
 with dest.open("x") as f:
     json.dump(cfg, f, indent=2)
-    f.write("\\n")
+    f.write("\n")
 print("Reproducible job configuration:", dest, "with", cpus, "injection workers", flush=True)
 PY
 
