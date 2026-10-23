@@ -20,9 +20,20 @@ def make_filterbank(path, *, samples=32768, nchans=8, tsamp=0.001,
     if path.exists():
         raise FileExistsError(f"Refusing to overwrite {path}")
     rng = random.Random(seed)
+    # SIGPROC wire types are determined by FIELD NAME, never by Python's
+    # runtime value type. In particular, argparse does not cast numeric
+    # default values, so a default of 60000 (int) used to corrupt the
+    # 8-byte floating-point tstart field (similarly fch1=1400).
+    int_fields = {"telescope_id", "machine_id", "data_type",
+                  "nchans", "nbits", "nifs"}
+    double_fields = {"tstart", "tsamp", "fch1", "foff",
+                     "src_raj", "src_dej"}
+    string_fields = {"source_name"}
+
     def field(f, value):
         b = value.encode("ascii")
         f.write(struct.pack("<i", len(b)) + b)
+
     with path.open("wb") as f:
         field(f, "HEADER_START")
         for key, value in [
@@ -34,12 +45,14 @@ def make_filterbank(path, *, samples=32768, nchans=8, tsamp=0.001,
             ("nchans", nchans), ("nbits", 8), ("nifs", 1),
         ]:
             field(f, key)
-            if isinstance(value, str):
+            if key in string_fields:
                 field(f, value)
-            elif isinstance(value, int):
-                f.write(struct.pack("<i", value))
-            else:
+            elif key in int_fields:
+                f.write(struct.pack("<i", int(value)))
+            elif key in double_fields:
                 f.write(struct.pack("<d", float(value)))
+            else:
+                raise ValueError(f"Unrecognized SIGPROC header field: {key}")
         field(f, "HEADER_END")
         for _ in range(samples):
             f.write(bytes(max(0, min(255, round(rng.gauss(mean, std))))
@@ -53,11 +66,11 @@ def main():
     p.add_argument("--samples", type=int, default=32768)
     p.add_argument("--nchans", type=int, default=8)
     p.add_argument("--tsamp", type=float, default=0.001)
-    p.add_argument("--tstart", type=float, default=60000)
+    p.add_argument("--tstart", type=float, default=60000.0)
     p.add_argument("--seed", type=int, default=771)
     p.add_argument("--mean", type=float, default=128)
     p.add_argument("--std", type=float, default=6)
-    p.add_argument("--fch1", type=float, default=1400)
+    p.add_argument("--fch1", type=float, default=1400.0)
     p.add_argument("--foff", type=float, default=-1.0)
     args = p.parse_args()
     path = make_filterbank(args.output, samples=args.samples, nchans=args.nchans,
