@@ -8,6 +8,7 @@ by its robust phase noise for display, so plotted values are relative S/N-like
 intensities, NOT flux or calibrated pulsar detection significance.
 """
 import argparse
+import json
 from pathlib import Path
 
 import numpy as np
@@ -34,7 +35,56 @@ def weighted_mean_profiles(cube, weights, axis):
     return np.divide(numerator, denominator, out=np.zeros_like(numerator), where=denominator > 0)
 
 
-def plot(archive: Path, output: Path, label: str):
+def read_injection_truth(archive: Path, source_id: str, manifest_path: Path | None = None):
+    """Load *injected* parameters from the saved run manifest, never fit data.
+
+    An INCEPTION-Lite archive is case_0001/folds/PSR_ID/PSR_ID*.ar;
+    the original injection run manifest lives three parents above it.
+    """
+    case_dir = archive.parent.parent.parent
+    path = manifest_path if manifest_path is not None else case_dir / "run_manifest.json"
+    if not path.is_file():
+        if manifest_path is not None:
+            raise FileNotFoundError(f"Requested injection manifest not found: {path}")
+        return None
+    obj = json.loads(path.read_text(encoding="utf-8"))
+    matches = [p for p in obj.get("pulsars", []) if p.get("ID") == source_id]
+    if len(matches) != 1:
+        raise ValueError(
+            f"Manifest {path} contains {len(matches)} source(s) named {source_id!r}; "
+            "refusing to label plot with unrelated truth parameters"
+        )
+    pulse = matches[0]
+    resolved = case_dir / "resolved_injection.json"
+    global_config = {}
+    if resolved.is_file():
+        global_config = json.loads(resolved.read_text(encoding="utf-8")).get("psr_global", {})
+    if "P0" in pulse:
+        period = float(pulse["P0"])
+        frequency = 1.0 / period
+    else:
+        frequency = float(pulse["F0"])
+        period = 1.0 / frequency
+    if not period > 0:
+        raise ValueError("Injected period/frequency is not positive")
+    get = lambda key, default=None: pulse.get(key, global_config.get(key, default))
+    return {
+        "id": source_id,
+        "period": period,
+        "frequency": frequency,
+        "dm": float(get("DM", 0)),
+        "a": float(get("A0", 0)),
+        "jerk": float(get("A1", 0)),
+        "snr": float(pulse["SNR"]),
+        "duty": float(get("duty_cycle", 0)),
+        "frame": str(get("frame", "unspecified")),
+        "accep": get("ACCEPOCH", None),
+        "manifest": str(path),
+    }
+
+
+def plot(archive: Path, output: Path, label: str, manifest: Path | None = None):
+    truth = read_injection_truth(archive, archive.parent.name, manifest)
     with fits.open(archive, memmap=False) as hdul:
         sub = hdul["SUBINT"]
         data = np.asarray(sub.data["DATA"], dtype=np.float64)
@@ -103,11 +153,54 @@ def plot(archive: Path, output: Path, label: str):
     doubled_frequency = np.tile(freq_phase, (1, 2))
 
     plt.rcParams.update({"font.size": 10, "figure.dpi": 120, "savefig.dpi": 170})
-    fig = plt.figure(figsize=(12, 10))
-    gs = GridSpec(3, 1, figure=fig, height_ratios=[1.05, 1.55, 1.55], hspace=0.29)
-    ax0 = fig.add_subplot(gs[0])
-    ax1 = fig.add_subplot(gs[1], sharex=ax0)
-    ax2 = fig.add_subplot(gs[2], sharex=ax0)
+    fig = plt.figure(figsize=(12, 11.3))
+    gs = GridSpec(4, 1, figure=fig, height_ratios=[0.89, 1.05, 1.55, 1.55], hspace=0.33)
+    axmeta = fig.add_subplot(gs[0])
+    ax0 = fig.add_subplot(gs[1])
+    ax1 = fig.add_subplot(gs[2], sharex=ax0)
+    ax2 = fig.add_subplot(gs[3], sharex=ax0)
+
+    # Metadata are injected *truth* taken from run_manifest.json, not
+    # recovered values or an S/N estimated from the folded intensity.
+    axmeta.set_xlim(0, 1)
+    axmeta.set_ylim(0, 1)
+    axmeta.set_facecolor("#f6f8fb")
+    axmeta.set_xticks([])
+    axmeta.set_yticks([])
+    for spine in axmeta.spines.values():
+        spine.set_color("#d3dce7")
+    if truth is not None:
+        epoch_text = (
+            f'{truth["frame"]}; ACCEPOCH={float(truth["accep"]):g}'
+            if truth["accep"] is not None
+            else truth["frame"]
+        )
+        entries = [
+            ("Spin period P₀", f'{truth["period"] * 1e3:.9f} ms'),
+            ("Spin frequency f₀", f'{truth["frequency"]:.6f} Hz'),
+            ("Additional DM", f'{truth["dm"]:g} pc cm⁻³'),
+            ("Acceleration a₀", f'{truth["a"]:+g} m s⁻²'),
+            ("Jerk j₀", f'{truth["jerk"]:+g} m s⁻³'),
+            ("Injected S/N target", f'{truth["snr"]:g} (not measured)'),
+            ("Duty cycle", f'{100 * truth["duty"]:g}%'),
+            ("Reference epoch", epoch_text),
+        ]
+        axmeta.text(
+            0.02, 0.92, "INJECTION TRUTH  ·  Not search-recovered measurements",
+            ha="left", va="top", fontsize=9.5, fontweight="bold", color="#26394d",
+        )
+        for idx, (key, value) in enumerate(entries):
+            col, row = idx % 4, idx // 4
+            x = 0.02 + 0.245 * col
+            y = 0.68 - 0.40 * row
+            axmeta.text(x, y, key, ha="left", va="center", fontsize=8.5, color="#53677e")
+            axmeta.text(x, y - 0.16, value, ha="left", va="center",
+                        fontsize=10.1, color="#15263b", fontweight="semibold")
+    else:
+        axmeta.text(0.02, 0.72, "INJECTION TRUTH NOT AVAILABLE", fontsize=10,
+                    color="#7b3f2c", fontweight="bold")
+        axmeta.text(0.02, 0.37, "Provide --manifest or use the original INCEPTION-Lite fold directory.",
+                    fontsize=9.5, color="#53677e")
 
     ax0.plot(two_cycle_phase, doubled_profile, color="#283d6a", lw=1.7)
     ax0.set_ylabel("Relative folded intensity")
@@ -166,6 +259,8 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--archive", type=Path, required=True, help="PulsarX .ar archive")
     p.add_argument("--output", type=Path, required=True, help="Output 3-panel PNG path")
-    p.add_argument("--label", type=str, default=None, help="Injection ID/source")
+    p.add_argument("--label", type=str, default=None, help="Plot label (injection truth is always matched by archive parent directory ID)")
+    p.add_argument("--manifest", type=Path, default=None,
+                   help="Optional injection run_manifest.json; defaults to case_0001/run_manifest.json")
     args = p.parse_args()
-    plot(args.archive, args.output, args.label or args.archive.parent.name)
+    plot(args.archive, args.output, args.label or args.archive.parent.name, args.manifest)
