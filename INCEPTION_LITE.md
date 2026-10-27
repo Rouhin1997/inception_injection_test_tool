@@ -228,3 +228,36 @@ This validates those *truth folds*, not PULSEJET candidate recovery.
 Already generated PNGs do not change automatically; rerun the diagnostic
 plotter on existing `.ar` archives, or regenerate the fallback images.
 Container images are immutable and require rebuilding to incorporate this fix.
+
+
+### M62 20-source truth-fold visual quality-control batch
+
+To regenerate the *existing* five PulsarX truth-fold archives in each of
+W1/W2/W3/W4 (20 total) as corrected three-panel diagnostics and produce
+a machine-readable QC table, run from a **host source checkout** on the
+cluster (not from the older immutable `inception_lite.sif` source):
+
+```bash
+REPO=/home/rnag/PULSEJET_validation/inception_injection_test_tool
+ROOT=/home/rnag/PULSEJET_validation/stage6_m62/m62_15m_injections
+SIF=/home/rnag/PULSEJET_validation/images/inception_lite.sif
+
+singularity exec --cleanenv "$SIF" env PYTHONNOUSERSITE=1 python3 \
+  "$REPO/scripts/batch_m62_pulsarx_diagnostics.py" \
+  --root "$ROOT" \
+  --out "$ROOT/pulsarx_diagnostics_corrected"
+```
+
+Output: 20 corrected `.png` diagnostics and
+`pulsarx_diagnostics_corrected/m62_20_truth_fold_qc.csv`. The CSV records
+archive DM versus injected DM and raw/corrected profile peak/MAD as a
+**descriptive, non-calibrated** contrast. The command checks that it found
+four five-source manifests and exactly one `.ar` per source, and returns a
+nonzero exit status on missing/failed plot outputs. It does not regenerate
+`.fil` or `.ar` files; the previous plots in `folds/` are unchanged.
+Examine all PNGs rather than declaring a scientific pass from the peak/MAD
+metric alone. Low injected S/N or DM=0 may show little or no contrast gain.
+
+PRESTO `prepfold` writes a different `.pfd` format and is not read by
+this PulsarX-specific PSRFITS handler. A future PRESTO plotter must parse
+its own native products; this fix cannot affect PRESTO folding.
