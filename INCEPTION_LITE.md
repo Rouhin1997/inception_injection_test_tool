@@ -261,3 +261,30 @@ metric alone. Low injected S/N or DM=0 may show little or no contrast gain.
 PRESTO `prepfold` writes a different `.pfd` format and is not read by
 this PulsarX-specific PSRFITS handler. A future PRESTO plotter must parse
 its own native products; this fix cannot affect PRESTO folding.
+
+
+### Completed M62 twenty-source visual validation checkpoint (2026-10-27)
+
+The user ran the corrected M62 batch on all four completed observational
+injection windows and shared `m62_20_truth_fold_qc.csv` plus the full
+twenty three-panel PNG set. **All 20 PulsarX known-parameter truth archives
+were processed** (5 each W1–W4); archive DM matches injected DM in each,
+and every archive has 89×32×128 subintegrations/channels/phase bins with
+positive channel weights. After channel alignment, median integrated
+profile peak/MAD is 25.128 (range 7.103–58.391). Every source with
+nonzero additional DM improved; the DM=0 W1/I01 control stayed at 52.484.
+Even the faint injected target-S/N cases W2/I10=10, W4/I18=12 and
+W4/I20=15 show visually identifiable folded profile peaks, though weaker
+time/frequency waterfalls. Visual inspection found no obvious systematic
+pulse-phase drift across the windows. Peak/MAD is **not** calibrated
+detection S/N or completeness. A separate PRESTO fixed-parameter control
+for W3/I11 yielded `~60.8 sigma` in its `.bestprof`.
+
+This passes a **truth-fold plotting/consistency gate**, not a blind PULSEJET
+candidate-recovery test. The saved PulsarX `.ar`, original injected
+`.fil`, injection physics and existing images were not modified by this
+correction. New plotted files:
+`$HOME/PULSEJET_validation/stage6_m62/m62_15m_injections/pulsarx_diagnostics_corrected/`.
+The companion PULSEJET development log and cluster handoff describe the
+next controlled GPU searches and a known still-unfixed `PeakFinder`
+frequency-bound bug in the older pinned PULSEJET image.
