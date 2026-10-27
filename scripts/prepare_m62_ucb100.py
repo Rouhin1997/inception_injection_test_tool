@@ -13,7 +13,15 @@ import hashlib
 import json
 import math
 import random
+import sys
 from pathlib import Path
+
+# When invoked as "python3 scripts/prepare_m62_ucb100.py" Python adds
+# scripts/ rather than the repository root to sys.path. The same entrypoint
+# must work from frontend2 without requiring PYTHONPATH or pip install.
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+if str(REPOSITORY_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPOSITORY_ROOT))
 from inception_lite.runner import plan_cases, read_filterbank_header
 
 G = 6.67430e-11
@@ -100,8 +108,20 @@ def build_population(seed=SEED):
 
 
 def generate(root, destination, seed=SEED):
+    # A previous preflight may have created ONLY the logs directory, as
+    # happens when Slurm pilots are submitted before the catalogue exists.
+    # Their failed-job logs must be retained. We may safely create a plan
+    # alongside that directory, but NEVER replace an existing plan/output.
     if destination.exists():
-        raise FileExistsError("Refusing to overwrite existing campaign: " + str(destination))
+        if not destination.is_dir():
+            raise FileExistsError("Campaign path is not a directory: " + str(destination))
+        contents = list(destination.iterdir())
+        unexpected = [p for p in contents
+                      if p.name != "logs" or not p.is_dir()]
+        if unexpected:
+            raise FileExistsError(
+                "Refusing to overwrite an existing/partial campaign; existing entries: "
+                + ", ".join(str(p) for p in unexpected))
     backgrounds = []
     for i in range(1, 5):
         path = root / "stage6_m62" / "m62_15m_windows" / ("W%d_M62_background.fil" % i)
@@ -144,7 +164,7 @@ def generate(root, destination, seed=SEED):
         else:
             record["t0_mjd"] = None
         rows.append(record)
-    destination.mkdir(parents=True)  # only after all source files validated
+    destination.mkdir(parents=True, exist_ok=True)  # may already contain logs only
     try:
         for batch in range(1, 21):
             window = (batch-1) % 4 + 1
