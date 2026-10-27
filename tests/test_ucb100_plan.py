@@ -58,9 +58,16 @@ class UCB100PlanTests(unittest.TestCase):
                 (base / ("W%d_M62_background.fil" % i)).write_bytes(b"placeholder")
             header = dict(nbits=8,nchans=256,actual_nsamples=14835712,
                           tsamp=0.00006024,tstart=60200.12345)
-            with patch.object(PLAN, "read_filterbank_header", return_value=header):
-                rows=PLAN.generate(root, root / "stage10_ucb100")
+            # Reproduce the actual frontend2 failure sequence: both Slurm
+            # pilots exited before planning and left job logs in an otherwise
+            # empty campaign directory. Keep those logs, then create config.
             dest=root/"stage10_ucb100"
+            (dest/"logs").mkdir(parents=True)
+            old_job_log=dest/"logs"/"pilot_node1_66570_1.out"
+            old_job_log.write_text("Missing injection SIF/config\\n")
+            with patch.object(PLAN, "read_filterbank_header", return_value=header):
+                rows=PLAN.generate(root,dest)
+            self.assertEqual(old_job_log.read_text(),"Missing injection SIF/config\\n")
             self.assertEqual(len(rows),100)
             self.assertEqual(len(list((dest/"configs").glob("batch_*.json"))),20)
             with (dest/"ucb100_truth.csv").open() as fh:
@@ -94,6 +101,15 @@ class UCB100PlanTests(unittest.TestCase):
                 self.assertEqual(
                   (base / ("W%d_M62_background.fil" % i)).read_bytes(),
                   b"placeholder")
+            # Only logs/ may pre-exist; unrelated files or a partial old
+            # catalogue must still cause a hard failure.
+            unsafe=root/"stage10_wrong_partial"
+            unsafe.mkdir()
+            (unsafe/"configs").mkdir()
+            with patch.object(PLAN,"read_filterbank_header",return_value=header):
+                with self.assertRaises(FileExistsError):
+                    PLAN.generate(root,unsafe)
+
 
 
 if __name__=="__main__":
