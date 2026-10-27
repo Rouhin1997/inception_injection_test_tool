@@ -24,14 +24,14 @@ class TestPulsarXArchiveAlignment(unittest.TestCase):
         periods = np.full(3, 1 / 241)
         raw, freq, pulse = self.dispersed_cube(4, periods)
         restored = restore_pulsarx_dispersion(raw, freq, periods, 4)
-        np.testing.assert_allclose(restored, pulse[None, None, :], atol=1e-12)
+        np.testing.assert_allclose(restored, np.broadcast_to(pulse, restored.shape), atol=1e-12)
         self.assertLess(np.max(raw.mean(axis=(0, 1))), np.max(pulse) * 0.5)
 
     def test_evolving_folding_period_recovers(self):
         periods = np.array([1 / 200, 1 / 280, 1 / 340])
         raw, freq, pulse = self.dispersed_cube(12, periods)
         restored = restore_pulsarx_dispersion(raw, freq, periods, 12)
-        np.testing.assert_allclose(restored, pulse[None, None, :], atol=1e-12)
+        np.testing.assert_allclose(restored, np.broadcast_to(pulse, restored.shape), atol=1e-12)
 
     def test_zero_dm_preserves_profile(self):
         periods = np.array([0.005, 0.004])
