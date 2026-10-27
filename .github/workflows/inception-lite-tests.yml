@@ -28,7 +28,9 @@ jobs:
       - name: Test multi-pulsar shared-filterbank injection and parallel workers
         run: python -m unittest discover -s tests -p 'smoke_multi_injection.py' -v
       - name: Validate 100-source orbital injection catalogue and batch safety
-        run: python -m unittest discover -s tests -p 'test_ucb100_plan.py' -v
+        run: |
+          python -m unittest discover -s tests -p 'test_ucb100_plan.py' -v
+          python scripts/prepare_m62_ucb100.py --help >/dev/null
       - name: Syntax-check generic and two-node compact-binary SLURM launchers
         run: |
           bash -n scripts/slurm_inception_lite.sh
