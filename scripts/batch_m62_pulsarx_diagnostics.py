@@ -84,7 +84,7 @@ def process_one(case, outdir, pulse):
     png = outdir / (source_id + ".png")
     plot(archive, png, source_id, case / "run_manifest.json")
 
-    period = float(pulse.get("P0", 1 / float(pulse["F0"]))) if "P0" not in pulse else float(pulse["P0"])
+    period = float(pulse["P0"]) if "P0" in pulse else 1.0 / float(pulse["F0"])
     return {
         "id": source_id, "window": source_id.split("_")[1],
         "status": "PLOTTED", "error": "",
