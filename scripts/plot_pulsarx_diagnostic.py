@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Three-panel scientific diagnostic from an actual PulsarX folded PSRFITS .ar.
 
-Uses the full SUBINT DATA cube, DAT_SCL, DAT_OFFS, DAT_WTS and DAT_FREQ.
+Uses SUBINT DATA, DAT_SCL, DAT_OFFS, DAT_WTS, DAT_FREQ and PERIOD.
+PulsarX archive-writer dispersion offsets are reversed before summing.
 No injected model/profile is synthesized; the fold itself must already exist.
 Each time/channel cell is baseline-subtracted (median over phase) and divided
 by its robust phase noise for display, so plotted values are relative S/N-like
@@ -12,11 +13,17 @@ import json
 from pathlib import Path
 
 import numpy as np
-from astropy.io import fits
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
+import sys
+
+# Permit direct execution as 'python scripts/plot_pulsarx_diagnostic.py'.
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+from inception_lite.fold_plots import read_dedispersed_pulsarx_archive
 
 
 def weighted_mean_profiles(cube, weights, axis):
@@ -85,27 +92,15 @@ def read_injection_truth(archive: Path, source_id: str, manifest_path: Path | No
 
 def plot(archive: Path, output: Path, label: str, manifest: Path | None = None):
     truth = read_injection_truth(archive, archive.parent.name, manifest)
-    with fits.open(archive, memmap=False) as hdul:
-        sub = hdul["SUBINT"]
-        data = np.asarray(sub.data["DATA"], dtype=np.float64)
-        if data.ndim != 4:
-            raise ValueError(f"Expected SUBINT DATA shape [time,pol,chan,phase], got {data.shape}")
-        nsub, npol, nchan, nbin = data.shape
-        if npol != 1:
-            raise ValueError(f"Expected total-intensity 1-pol archive, received npol={npol}")
-        if nsub < 2 or nchan < 2 or nbin < 8:
-            raise ValueError("Not enough samples/channels/bins for a 3-panel diagnostic")
-
-        # In PSRFITS, integer-quantized DATA are converted to real intensity
-        # using DATA * DAT_SCL + DAT_OFFS for each subint/polarization/channel.
-        scales = np.asarray(sub.data["DAT_SCL"], dtype=np.float64).reshape(nsub, npol, nchan)
-        offsets = np.asarray(sub.data["DAT_OFFS"], dtype=np.float64).reshape(nsub, npol, nchan)
-        weights = np.asarray(sub.data["DAT_WTS"], dtype=np.float64).reshape(nsub, nchan)
-        frequencies = np.asarray(sub.data["DAT_FREQ"], dtype=np.float64).reshape(nsub, nchan)
-        tsub = np.asarray(sub.data["TSUBINT"], dtype=np.float64).ravel()
-        tmid = np.asarray(sub.data["OFFS_SUB"], dtype=np.float64).ravel()
-
-        intensity = data[:, 0, :, :] * scales[:, 0, :, None] + offsets[:, 0, :, None]
+    folded = read_dedispersed_pulsarx_archive(archive)
+    intensity = folded["intensity"]
+    nsub, nchan, nbin = intensity.shape
+    if nsub < 2 or nchan < 2 or nbin < 8:
+        raise ValueError("Not enough samples/channels/bins for a 3-panel diagnostic")
+    weights = folded["weights"]
+    frequencies = folded["frequencies"]
+    tsub = folded["tsub"]
+    tmid = folded["tmid"]
 
     # Median phase baseline and robust off-pulse-like phase scatter for each
     # time/channel cell; source duty cycle is expected to be small.
@@ -241,7 +236,7 @@ def plot(archive: Path, output: Path, label: str, manifest: Path | None = None):
 
     fig.text(0.06, 0.008,
              f"Real PulsarX PSRFITS SUBINT data: {nsub} subintegrations × {nchan} channels × {nbin} bins. "
-             "DAT_SCL/OFFS/WTS applied; per-cell median baseline and robust-noise normalization. "
+             "DAT_SCL/OFFS/WTS applied; PulsarX archive channels dedispersed using DM and SUBINT PERIOD; per-cell robust normalization. "
              "Not flux calibrated.",
              ha="left", va="bottom", fontsize=8, color="dimgray")
     output.parent.mkdir(parents=True, exist_ok=True)
