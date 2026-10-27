@@ -56,7 +56,7 @@ class UCB100PlanTests(unittest.TestCase):
             base.mkdir(parents=True)
             for i in range(1,5):
                 (base / ("W%d_M62_background.fil" % i)).write_bytes(b"placeholder")
-            header = dict(nbits=8,actual_nsamples=14835712,
+            header = dict(nbits=8,nchans=256,actual_nsamples=14835712,
                           tsamp=0.00006024,tstart=60200.12345)
             with patch.object(PLAN, "read_filterbank_header", return_value=header):
                 rows=PLAN.generate(root, root / "stage10_ucb100")
