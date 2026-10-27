@@ -27,8 +27,12 @@ jobs:
         run: python -m unittest discover -s tests -p 'stress_jerk_injection.py' -v
       - name: Test multi-pulsar shared-filterbank injection and parallel workers
         run: python -m unittest discover -s tests -p 'smoke_multi_injection.py' -v
-      - name: Syntax-check generic SLURM launcher
-        run: bash -n scripts/slurm_inception_lite.sh
+      - name: Validate 100-source orbital injection catalogue and batch safety
+        run: python -m unittest discover -s tests -p 'test_ucb100_plan.py' -v
+      - name: Syntax-check generic and two-node compact-binary SLURM launchers
+        run: |
+          bash -n scripts/slurm_inception_lite.sh
+          bash -n scripts/slurm_m62_ucb100_batch.sh
       - name: Show standalone CLI help
         run: |
           python -m inception_lite --help
