@@ -205,3 +205,26 @@ injection parameters. Files are under
 a scientific recovery or sensitivity benchmark on the actual A40 cluster.
 The plots should be examined, and PULSEJET GPU recovery still needs
 independent injection-to-search validation.
+
+
+## PulsarX archive plot correction (2026-10-27)
+
+The PulsarX `psrfold_fil` archive writer reapplies channel-dependent
+dispersion delays when exporting the frequency-resolved PSRFITS `.ar`.
+Plotting scripts **must undo those phase shifts before averaging channels**.
+Both the headless PNG fallback (`inception_lite/fold_plots.py`) and the
+three-panel scientific diagnostic (`scripts/plot_pulsarx_diagnostic.py`)
+now share a correction using `SUBINT.DM`, per-subintegration `PERIOD`,
+`DAT_FREQ`, `DAT_SCL`, `DAT_OFFS`, and `DAT_WTS`.
+Do not apply it twice or to an archive already dedispersed by other tools.
+
+On existing M62 W3 injections, corrected archive peak/MAD improved from
+2.58 to 31.40 (I11, stationary), 2.78 to 12.80 (I12, acceleration),
+2.23 to 33.98 (I13, jerk), and 2.30 to 23.66 (I14, mixed).
+These are **profile-contrast ratios, not calibrated detection S/N**.
+PRESTO independently recovered stationary I11 at about 60.8 sigma.
+This validates those *truth folds*, not PULSEJET candidate recovery.
+
+Already generated PNGs do not change automatically; rerun the diagnostic
+plotter on existing `.ar` archives, or regenerate the fallback images.
+Container images are immutable and require rebuilding to incorporate this fix.
