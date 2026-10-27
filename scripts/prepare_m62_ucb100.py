@@ -78,13 +78,23 @@ def build_population(seed=SEED):
             else:
                 raise RuntimeError("Could not populate constrained class " + kind)
         by_class.append(accepted)
-    # Round-robin classes across batches, shuffling deterministically within
-    # each stratum to prevent all extreme systems accumulating on one node.
-    ordered = []
-    while any(by_class):
-        for group in by_class:
-            if group:
-                ordered.append(group.pop(0))
+    # Spread ALL motion classes across the 20 jobs/nodes, rather than
+    # concentrating strong-jerk signals in the later batches on node2.
+    # Prefer the least-populated batch at each placement; deterministic
+    # tie breaking uses the seeded RNG. Each batch receives exactly 5.
+    batches = [[] for _ in range(20)]
+    for group in by_class:
+        rng.shuffle(group)
+        for source in group:
+            fewest = min(len(batch) for batch in batches)
+            eligible = [i for i,batch in enumerate(batches)
+                        if len(batch) == fewest]
+            pick = rng.choice(eligible)
+            batches[pick].append(source)
+    assert all(len(batch) == 5 for batch in batches)
+    for batch in batches:
+        rng.shuffle(batch)
+    ordered = [source for batch in batches for source in batch]
     assert len(ordered) == 100
     return ordered
 
